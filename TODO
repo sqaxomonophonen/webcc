@@ -9,3 +9,20 @@
    - switch/case? analyse cases and choose a strategy? like: simple if/else;
      jump tables; binary search if/else? the self-hosted compiler could benefit
      from this.
+
+
+hodgepodge description:
+ - fork of chibicc
+ - replaces x86 codegen with WASM codegen
+ - no WASI/libc dependency
+ - command-line nodejs version
+ - no file system, system headers (angle-bracket includes, see include/*)
+   inlined, user headers (double quoted) provided by caller?
+ - scratch allocator
+
+
+more:
+ - extract source normalization? (canonicalize_newline,
+   remove_backslash_newline, convert_universal_chars). reasons: builtin header
+   sources should be read-only, so attempts at normalization ought to crash.
+   also, normalization can be done once for often included headers?
