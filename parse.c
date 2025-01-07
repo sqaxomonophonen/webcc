@@ -1929,7 +1929,7 @@ static int64_t eval2(Node *node, char ***label) {
     error_tok(node->tok, "not a compile-time constant");
     break;
   }
-  assert(!"unreachable");
+  unreachable();
 }
 
 static int64_t eval_rval(Node *node, char ***label) {
@@ -1947,7 +1947,7 @@ static int64_t eval_rval(Node *node, char ***label) {
     error_tok(node->tok, "invalid initializer");
     break;
   }
-  assert(!"unreachable");
+  unreachable();
 }
 
 static bool is_const_expr(Node *node) {
@@ -1986,7 +1986,7 @@ static bool is_const_expr(Node *node) {
   default:
     return false;
   }
-  assert(!"unreachable");
+  unreachable();
 }
 
 int64_t const_expr(Token **rest, Token *tok) {
@@ -2028,7 +2028,7 @@ static double eval_double(Node *node) {
     error_tok(node->tok, "not a compile-time constant");
     break;
   }
-  assert(!"unreachable");
+  unreachable();
 }
 
 // Convert op= operators to expressions containing an assignment.

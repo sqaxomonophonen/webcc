@@ -86,7 +86,7 @@ bool is_compatible(Type *t1, Type *t2) {
   default:
     return false;
   }
-  assert(!"unreachable");
+  unreachable();
 }
 
 Type *copy_type(Type *ty) {

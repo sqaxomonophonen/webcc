@@ -1,5 +1,12 @@
 #include "chibicc.h"
 
+char *base_file; // XXX?
+
+PLEASE_EXPORT void webcc0(void)
+{
+	init_macros();
+}
+
 PLEASE_EXPORT void webcc(char* fn)
 {
   // TODO XXX
