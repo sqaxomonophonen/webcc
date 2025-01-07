@@ -4,7 +4,7 @@
  - remove dependency on file system (when running in a WASM VM,
    #include-statements should be served from memory). look for uses of file
    functions outside of main.c: fopen(), fclose(), open_memstream(), fread(),
-   fputc()...
+   fputc()... and FILE*
    ...
 
  - remove stuff

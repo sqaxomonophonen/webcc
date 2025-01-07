@@ -1,5 +1,8 @@
-# for your temporary files, notes, etc 
-tmp/ 
+*.o
+*.wasm
+
+# for your temporary files: notes, etc
+tmp/
 
 # vim swap files
 .*swp

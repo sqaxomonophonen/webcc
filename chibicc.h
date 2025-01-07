@@ -1,3 +1,4 @@
+#if defined( USE_LIBC )
 #define _POSIX_C_SOURCE 200809L
 #include <assert.h>
 #include <ctype.h>
@@ -17,6 +18,13 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#elif defined( USE_LIBC_ANYPCT_WASM32 )
+#include "libc_anypct_wasm32.h"
+#else
+#error "missing USE_* define"
+#endif
+
+#include "webcc.h"
 
 #define MAX(x, y) ((x) < (y) ? (y) : (x))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -75,7 +83,7 @@ struct Token {
   TokenKind kind;   // Token kind
   Token *next;      // Next token
   int64_t val;      // If kind is TK_NUM, its value
-  long double fval; // If kind is TK_NUM, its value
+  double fval;      // If kind is TK_NUM, its value
   char *loc;        // Token location
   int len;          // Token length
   Type *ty;         // Used if TK_NUM or TK_STR
@@ -287,7 +295,7 @@ struct Node {
 
   // Numeric literal
   int64_t val;
-  long double fval;
+  double fval;
 };
 
 Node *new_cast(Node *expr, Type *ty);
@@ -408,7 +416,7 @@ void add_type(Node *node);
 // codegen.c
 //
 
-void codegen(Obj *prog, FILE *out);
+int codegen(Obj *prog, void* out_buffer, size_t out_cap);
 int align_to(int n, int align);
 
 //
@@ -443,7 +451,6 @@ void hashmap_put(HashMap *map, char *key, void *val);
 void hashmap_put2(HashMap *map, char *key, int keylen, void *val);
 void hashmap_delete(HashMap *map, char *key);
 void hashmap_delete2(HashMap *map, char *key, int keylen);
-void hashmap_test(void);
 
 //
 // main.c

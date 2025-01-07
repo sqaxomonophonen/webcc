@@ -13,12 +13,11 @@ static bool at_bol;
 static bool has_space;
 
 // Reports an error and exit.
-void error(char *fmt, ...) {
+noreturn void error(char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
-  fprintf(stderr, "\n");
-  exit(1);
+  verrorf(fmt,ap);
+  abort();
 }
 
 // Reports an error message in the following format.
@@ -37,16 +36,16 @@ static void verror_at(char *filename, char *input, int line_no,
     end++;
 
   // Print out the line.
-  int indent = fprintf(stderr, "%s:%d: ", filename, line_no);
-  fprintf(stderr, "%.*s\n", (int)(end - line), line);
+  int indent = errorf("%s:%d: ", filename, line_no);
+  errorf("%.*s\n", (int)(end - line), line);
 
   // Show the error message.
   int pos = display_width(line, loc - line) + indent;
 
-  fprintf(stderr, "%*s", pos, ""); // print pos spaces.
-  fprintf(stderr, "^ ");
-  vfprintf(stderr, fmt, ap);
-  fprintf(stderr, "\n");
+  errorf("%*s", pos, ""); // print pos spaces.
+  errorf("^ ");
+  verrorf(fmt, ap);
+  errorf("\n");
 }
 
 void error_at(char *loc, char *fmt, ...) {
@@ -58,14 +57,14 @@ void error_at(char *loc, char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   verror_at(current_file->name, current_file->contents, line_no, loc, fmt, ap);
-  exit(1);
+  abort();
 }
 
 void error_tok(Token *tok, char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   verror_at(tok->file->name, tok->file->contents, tok->line_no, tok->loc, fmt, ap);
-  exit(1);
+  abort();
 }
 
 void warn_tok(Token *tok, char *fmt, ...) {
@@ -98,7 +97,7 @@ bool consume(Token **rest, Token *tok, char *str) {
 
 // Create a new token.
 static Token *new_token(TokenKind kind, char *start, char *end) {
-  Token *tok = calloc(1, sizeof(Token));
+  Token *tok = scratch_calloc(1, sizeof(Token));
   tok->kind = kind;
   tok->loc = start;
   tok->len = end - start;
@@ -244,7 +243,7 @@ static char *string_literal_end(char *p) {
 
 static Token *read_string_literal(char *start, char *quote) {
   char *end = string_literal_end(quote + 1);
-  char *buf = calloc(1, end - quote);
+  char *buf = scratch_calloc(1, end - quote);
   int len = 0;
 
   for (char *p = quote + 1; p < end;) {
@@ -269,7 +268,7 @@ static Token *read_string_literal(char *start, char *quote) {
 // is called a "surrogate pair".
 static Token *read_utf16_string_literal(char *start, char *quote) {
   char *end = string_literal_end(quote + 1);
-  uint16_t *buf = calloc(2, end - start);
+  uint16_t *buf = scratch_calloc(2, end - start);
   int len = 0;
 
   for (char *p = quote + 1; p < end;) {
@@ -302,7 +301,7 @@ static Token *read_utf16_string_literal(char *start, char *quote) {
 // encoded in 4 bytes.
 static Token *read_utf32_string_literal(char *start, char *quote, Type *ty) {
   char *end = string_literal_end(quote + 1);
-  uint32_t *buf = calloc(4, end - quote);
+  uint32_t *buf = scratch_calloc(4, end - quote);
   int len = 0;
 
   for (char *p = quote + 1; p < end;) {
@@ -431,7 +430,7 @@ static void convert_pp_number(Token *tok) {
 
   // If it's not an integer, it must be a floating point constant.
   char *end;
-  long double val = strtold(tok->loc, &end);
+  double val = strtod(tok->loc, &end);
 
   Type *ty;
   if (*end == 'f' || *end == 'F') {
@@ -491,7 +490,7 @@ Token *tokenize(File *file) {
   current_file = file;
 
   char *p = file->contents;
-  Token head = {};
+  Token head = {0};
   Token *cur = &head;
 
   at_bol = true;
@@ -636,42 +635,18 @@ Token *tokenize(File *file) {
   return head.next;
 }
 
-// Returns the contents of a given file.
-static char *read_file(char *path) {
-  FILE *fp;
-
-  if (strcmp(path, "-") == 0) {
-    // By convention, read from stdin if a given filename is "-".
-    fp = stdin;
-  } else {
-    fp = fopen(path, "r");
-    if (!fp)
-      return NULL;
-  }
-
-  char *buf;
-  size_t buflen;
-  FILE *out = open_memstream(&buf, &buflen);
-
-  // Read the entire file.
-  for (;;) {
-    char buf2[4096];
-    int n = fread(buf2, 1, sizeof(buf2), fp);
-    if (n == 0)
-      break;
-    fwrite(buf2, 1, n, out);
-  }
-
-  if (fp != stdin)
-    fclose(fp);
-
+static char *read_file(char *path)
+{
+  assert(!"TODO");
+  // TODO port this:
+  #if 0
   // Make sure that the last line is properly terminated with '\n'.
   fflush(out);
   if (buflen == 0 || buf[buflen - 1] != '\n')
     fputc('\n', out);
   fputc('\0', out);
   fclose(out);
-  return buf;
+  #endif
 }
 
 File **get_input_files(void) {
@@ -679,7 +654,7 @@ File **get_input_files(void) {
 }
 
 File *new_file(char *name, int file_no, char *contents) {
-  File *file = calloc(1, sizeof(File));
+  File *file = scratch_calloc(1, sizeof(File));
   file->name = name;
   file->display_name = name;
   file->file_no = file_no;
@@ -796,7 +771,7 @@ Token *tokenize_file(char *path) {
   File *file = new_file(path, file_no + 1, p);
 
   // Save the filename for assembler .file directive.
-  input_files = realloc(input_files, sizeof(char *) * (file_no + 2));
+  input_files = scratch_realloc(input_files, sizeof(char *) * (file_no + 2));
   input_files[file_no] = file;
   input_files[file_no + 1] = NULL;
   file_no++;

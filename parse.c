@@ -161,7 +161,7 @@ static int align_down(int n, int align) {
 }
 
 static void enter_scope(void) {
-  Scope *sc = calloc(1, sizeof(Scope));
+  Scope *sc = scratch_calloc(1, sizeof(Scope));
   sc->next = scope;
   scope = sc;
 }
@@ -190,7 +190,7 @@ static Type *find_tag(Token *tok) {
 }
 
 static Node *new_node(NodeKind kind, Token *tok) {
-  Node *node = calloc(1, sizeof(Node));
+  Node *node = scratch_calloc(1, sizeof(Node));
   node->kind = kind;
   node->tok = tok;
   return node;
@@ -244,7 +244,7 @@ static Node *new_vla_ptr(Obj *var, Token *tok) {
 Node *new_cast(Node *expr, Type *ty) {
   add_type(expr);
 
-  Node *node = calloc(1, sizeof(Node));
+  Node *node = scratch_calloc(1, sizeof(Node));
   node->kind = ND_CAST;
   node->tok = expr->tok;
   node->lhs = expr;
@@ -253,13 +253,13 @@ Node *new_cast(Node *expr, Type *ty) {
 }
 
 static VarScope *push_scope(char *name) {
-  VarScope *sc = calloc(1, sizeof(VarScope));
+  VarScope *sc = scratch_calloc(1, sizeof(VarScope));
   hashmap_put(&scope->vars, name, sc);
   return sc;
 }
 
 static Initializer *new_initializer(Type *ty, bool is_flexible) {
-  Initializer *init = calloc(1, sizeof(Initializer));
+  Initializer *init = scratch_calloc(1, sizeof(Initializer));
   init->ty = ty;
 
   if (ty->kind == TY_ARRAY) {
@@ -268,7 +268,7 @@ static Initializer *new_initializer(Type *ty, bool is_flexible) {
       return init;
     }
 
-    init->children = calloc(ty->array_len, sizeof(Initializer *));
+    init->children = scratch_calloc(ty->array_len, sizeof(Initializer *));
     for (int i = 0; i < ty->array_len; i++)
       init->children[i] = new_initializer(ty->base, false);
     return init;
@@ -280,11 +280,11 @@ static Initializer *new_initializer(Type *ty, bool is_flexible) {
     for (Member *mem = ty->members; mem; mem = mem->next)
       len++;
 
-    init->children = calloc(len, sizeof(Initializer *));
+    init->children = scratch_calloc(len, sizeof(Initializer *));
 
     for (Member *mem = ty->members; mem; mem = mem->next) {
       if (is_flexible && ty->is_flexible && !mem->next) {
-        Initializer *child = calloc(1, sizeof(Initializer));
+        Initializer *child = scratch_calloc(1, sizeof(Initializer));
         child->ty = mem->ty;
         child->is_flexible = true;
         init->children[mem->idx] = child;
@@ -299,7 +299,7 @@ static Initializer *new_initializer(Type *ty, bool is_flexible) {
 }
 
 static Obj *new_var(char *name, Type *ty) {
-  Obj *var = calloc(1, sizeof(Obj));
+  Obj *var = scratch_calloc(1, sizeof(Obj));
   var->name = name;
   var->ty = ty;
   var->align = ty->align;
@@ -1283,7 +1283,7 @@ static Type *copy_struct_type(Type *ty) {
   Member head = {};
   Member *cur = &head;
   for (Member *mem = ty->members; mem; mem = mem->next) {
-    Member *m = calloc(1, sizeof(Member));
+    Member *m = scratch_calloc(1, sizeof(Member));
     *m = *mem;
     cur = cur->next = m;
   }
@@ -1471,7 +1471,7 @@ write_gvar_data(Relocation *cur, Initializer *init, Type *ty, char *buf, int off
     return cur;
   }
 
-  Relocation *rel = calloc(1, sizeof(Relocation));
+  Relocation *rel = scratch_calloc(1, sizeof(Relocation));
   rel->offset = offset;
   rel->label = label;
   rel->addend = val;
@@ -1487,7 +1487,7 @@ static void gvar_initializer(Token **rest, Token *tok, Obj *var) {
   Initializer *init = initializer(rest, tok, var->ty, &var->ty);
 
   Relocation head = {};
-  char *buf = calloc(1, var->ty->size);
+  char *buf = scratch_calloc(1, var->ty->size);
   write_gvar_data(&head, init, var->ty, buf, 0);
   var->init_data = buf;
   var->rel = head.next;
@@ -1925,9 +1925,11 @@ static int64_t eval2(Node *node, char ***label) {
     return 0;
   case ND_NUM:
     return node->val;
+  default:
+    error_tok(node->tok, "not a compile-time constant");
+    break;
   }
-
-  error_tok(node->tok, "not a compile-time constant");
+  assert(!"unreachable");
 }
 
 static int64_t eval_rval(Node *node, char ***label) {
@@ -1941,9 +1943,11 @@ static int64_t eval_rval(Node *node, char ***label) {
     return eval2(node->lhs, label);
   case ND_MEMBER:
     return eval_rval(node->lhs, label) + node->member->offset;
+  default:
+    error_tok(node->tok, "invalid initializer");
+    break;
   }
-
-  error_tok(node->tok, "invalid initializer");
+  assert(!"unreachable");
 }
 
 static bool is_const_expr(Node *node) {
@@ -1979,9 +1983,10 @@ static bool is_const_expr(Node *node) {
     return is_const_expr(node->lhs);
   case ND_NUM:
     return true;
+  default:
+    return false;
   }
-
-  return false;
+  assert(!"unreachable");
 }
 
 int64_t const_expr(Token **rest, Token *tok) {
@@ -2019,9 +2024,11 @@ static double eval_double(Node *node) {
     return eval(node->lhs);
   case ND_NUM:
     return node->fval;
+  default:
+    error_tok(node->tok, "not a compile-time constant");
+    break;
   }
-
-  error_tok(node->tok, "not a compile-time constant");
+  assert(!"unreachable");
 }
 
 // Convert op= operators to expressions containing an assignment.
@@ -2554,7 +2561,7 @@ static void struct_members(Token **rest, Token *tok, Type *ty) {
     // Anonymous struct member
     if ((basety->kind == TY_STRUCT || basety->kind == TY_UNION) &&
         consume(&tok, tok, ";")) {
-      Member *mem = calloc(1, sizeof(Member));
+      Member *mem = scratch_calloc(1, sizeof(Member));
       mem->ty = basety;
       mem->idx = idx++;
       mem->align = attr.align ? attr.align : mem->ty->align;
@@ -2568,7 +2575,7 @@ static void struct_members(Token **rest, Token *tok, Type *ty) {
         tok = skip(tok, ",");
       first = false;
 
-      Member *mem = calloc(1, sizeof(Member));
+      Member *mem = scratch_calloc(1, sizeof(Member));
       mem->ty = declarator(&tok, tok, basety);
       mem->name = mem->ty->name;
       mem->idx = idx++;

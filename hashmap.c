@@ -39,7 +39,7 @@ static void rehash(HashMap *map) {
 
   // Create a new hashmap and copy all key-values.
   HashMap map2 = {};
-  map2.buckets = calloc(cap, sizeof(HashEntry));
+  map2.buckets = scratch_calloc(cap, sizeof(HashEntry));
   map2.capacity = cap;
 
   for (int i = 0; i < map->capacity; i++) {
@@ -75,7 +75,7 @@ static HashEntry *get_entry(HashMap *map, char *key, int keylen) {
 
 static HashEntry *get_or_insert_entry(HashMap *map, char *key, int keylen) {
   if (!map->buckets) {
-    map->buckets = calloc(INIT_SIZE, sizeof(HashEntry));
+    map->buckets = scratch_calloc(INIT_SIZE, sizeof(HashEntry));
     map->capacity = INIT_SIZE;
   } else if ((map->used * 100) / map->capacity >= HIGH_WATERMARK) {
     rehash(map);
@@ -133,7 +133,32 @@ void hashmap_delete2(HashMap *map, char *key, int keylen) {
     ent->key = TOMBSTONE;
 }
 
-void hashmap_test(void) {
+#ifdef UNIT_TEST
+
+// XXX move these deps...?
+void error(char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  fprintf(stderr, "\n");
+  exit(1);
+}
+
+char *format(char *fmt, ...) {
+  char *buf;
+  size_t buflen;
+  FILE *out = open_memstream(&buf, &buflen);
+
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(out, fmt, ap);
+  va_end(ap);
+  fclose(out);
+  return buf;
+}
+
+int main(void)
+{
   HashMap *map = calloc(1, sizeof(HashMap));
 
   for (int i = 0; i < 5000; i++)
@@ -162,4 +187,6 @@ void hashmap_test(void) {
 
   assert(hashmap_get(map, "no such key") == NULL);
   printf("OK\n");
+  return 0;
 }
+#endif

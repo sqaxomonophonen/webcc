@@ -89,7 +89,7 @@ static Token *skip_line(Token *tok) {
 }
 
 static Token *copy_token(Token *tok) {
-  Token *t = calloc(1, sizeof(Token));
+  Token *t = scratch_calloc(1, sizeof(Token));
   *t = *tok;
   t->next = NULL;
   return t;
@@ -103,7 +103,7 @@ static Token *new_eof(Token *tok) {
 }
 
 static Hideset *new_hideset(char *name) {
-  Hideset *hs = calloc(1, sizeof(Hideset));
+  Hideset *hs = scratch_calloc(1, sizeof(Hideset));
   hs->name = name;
   return hs;
 }
@@ -205,7 +205,7 @@ static char *quote_string(char *str) {
     bufsize++;
   }
 
-  char *buf = calloc(1, bufsize);
+  char *buf = scratch_calloc(1, bufsize);
   char *p = buf;
   *p++ = '"';
   for (int i = 0; str[i]; i++) {
@@ -308,7 +308,7 @@ static long eval_const_expr(Token **rest, Token *tok) {
 }
 
 static CondIncl *push_cond_incl(Token *tok, bool included) {
-  CondIncl *ci = calloc(1, sizeof(CondIncl));
+  CondIncl *ci = scratch_calloc(1, sizeof(CondIncl));
   ci->next = cond_incl;
   ci->ctx = IN_THEN;
   ci->tok = tok;
@@ -324,7 +324,7 @@ static Macro *find_macro(Token *tok) {
 }
 
 static Macro *add_macro(char *name, bool is_objlike, Token *body) {
-  Macro *m = calloc(1, sizeof(Macro));
+  Macro *m = scratch_calloc(1, sizeof(Macro));
   m->name = name;
   m->is_objlike = is_objlike;
   m->body = body;
@@ -355,7 +355,7 @@ static MacroParam *read_macro_params(Token **rest, Token *tok, char **va_args_na
       return head.next;
     }
 
-    MacroParam *m = calloc(1, sizeof(MacroParam));
+    MacroParam *m = scratch_calloc(1, sizeof(MacroParam));
     m->name = strndup(tok->loc, tok->len);
     cur = cur->next = m;
     tok = tok->next;
@@ -410,7 +410,7 @@ static MacroArg *read_macro_arg_one(Token **rest, Token *tok, bool read_rest) {
 
   cur->next = new_eof(tok);
 
-  MacroArg *arg = calloc(1, sizeof(MacroArg));
+  MacroArg *arg = scratch_calloc(1, sizeof(MacroArg));
   arg->tok = head.next;
   *rest = tok;
   return arg;
@@ -435,7 +435,7 @@ read_macro_args(Token **rest, Token *tok, MacroParam *params, char *va_args_name
   if (va_args_name) {
     MacroArg *arg;
     if (equal(tok, ")")) {
-      arg = calloc(1, sizeof(MacroArg));
+      arg = scratch_calloc(1, sizeof(MacroArg));
       arg->tok = new_eof(tok);
     } else {
       if (pp != params)
@@ -471,7 +471,7 @@ static char *join_tokens(Token *tok, Token *end) {
     len += t->len;
   }
 
-  char *buf = calloc(1, len);
+  char *buf = scratch_calloc(1, len);
 
   // Copy token texts.
   int pos = 0;
@@ -703,6 +703,7 @@ char *search_include_paths(char *filename) {
   return NULL;
 }
 
+#if 0
 static char *search_include_next(char *filename) {
   for (; include_next_idx < include_paths.len; include_next_idx++) {
     char *path = format("%s/%s", include_paths.data[include_next_idx], filename);
@@ -711,6 +712,7 @@ static char *search_include_next(char *filename) {
   }
   return NULL;
 }
+#endif
 
 // Read an #include argument.
 static char *read_include_filename(Token **rest, Token *tok, bool *is_dquote) {
@@ -792,7 +794,7 @@ static char *detect_include_guard(Token *tok) {
   return NULL;
 }
 
-static Token *include_file(Token *tok, char *path, Token *filename_tok) {
+static Token *include_file(Token *tok, char *path, bool is_dquote, Token *filename_tok) {
   // Check for "#pragma once"
   if (hashmap_get(&pragma_once, path))
     return tok;
@@ -807,7 +809,7 @@ static Token *include_file(Token *tok, char *path, Token *filename_tok) {
 
   Token *tok2 = tokenize_file(path);
   if (!tok2)
-    error_tok(filename_tok, "%s: cannot open file: %s", path, strerror(errno));
+    error_tok(filename_tok, "%s: no such file", path);
 
   guard_name = detect_include_guard(tok2);
   if (guard_name)
@@ -860,7 +862,10 @@ static Token *preprocess2(Token *tok) {
     if (equal(tok, "include")) {
       bool is_dquote;
       char *filename = read_include_filename(&tok, tok->next, &is_dquote);
+      tok = include_file(tok, filename, is_dquote, start->next->next);
+      continue;
 
+      #if 0
       if (filename[0] != '/' && is_dquote) {
         char *path = format("%s/%s", dirname(strdup(start->file->name)), filename);
         if (file_exists(path)) {
@@ -872,8 +877,10 @@ static Token *preprocess2(Token *tok) {
       char *path = search_include_paths(filename);
       tok = include_file(tok, path ? path : filename, start->next->next);
       continue;
+      #endif
     }
 
+    #if 0
     if (equal(tok, "include_next")) {
       bool ignore;
       char *filename = read_include_filename(&tok, tok->next, &ignore);
@@ -881,6 +888,7 @@ static Token *preprocess2(Token *tok) {
       tok = include_file(tok, path ? path : filename, start->next->next);
       continue;
     }
+    #endif
 
     if (equal(tok, "define")) {
       read_macro_definition(&tok, tok->next);
@@ -1024,6 +1032,7 @@ static Token *counter_macro(Token *tmpl) {
   return new_num_token(i++, tmpl);
 }
 
+#if 0
 // __TIMESTAMP__ is expanded to a string describing the last
 // modification time of the current file. E.g.
 // "Fri Jul 24 01:32:50 2020"
@@ -1037,11 +1046,13 @@ static Token *timestamp_macro(Token *tmpl) {
   buf[24] = '\0';
   return new_str_token(buf, tmpl);
 }
+#endif
 
 static Token *base_file_macro(Token *tmpl) {
   return new_str_token(base_file, tmpl);
 }
 
+#if 0
 // __DATE__ is expanded to the current date, e.g. "May 17 2020".
 static char *format_date(struct tm *tm) {
   static char mon[][4] = {
@@ -1056,6 +1067,7 @@ static char *format_date(struct tm *tm) {
 static char *format_time(struct tm *tm) {
   return format("\"%02d:%02d:%02d\"", tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
+#endif
 
 void init_macros(void) {
   // Define predefined macros
@@ -1103,13 +1115,17 @@ void init_macros(void) {
   add_builtin("__FILE__", file_macro);
   add_builtin("__LINE__", line_macro);
   add_builtin("__COUNTER__", counter_macro);
+  #if 0
   add_builtin("__TIMESTAMP__", timestamp_macro);
+  #endif
   add_builtin("__BASE_FILE__", base_file_macro);
 
+  #if 0
   time_t now = time(NULL);
   struct tm *tm = localtime(&now);
   define_macro("__DATE__", format_date(tm));
   define_macro("__TIME__", format_time(tm));
+  #endif
 }
 
 typedef enum {
@@ -1178,7 +1194,7 @@ static void join_adjacent_string_literals(Token *tok) {
     for (Token *t = tok1->next; t != tok2; t = t->next)
       len = len + t->ty->array_len - 1;
 
-    char *buf = calloc(tok1->ty->base->size, len);
+    char *buf = scratch_calloc(tok1->ty->base->size, len);
 
     int i = 0;
     for (Token *t = tok1; t != tok2; t = t->next) {

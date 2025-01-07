@@ -18,7 +18,7 @@ Type *ty_double = &(Type){TY_DOUBLE, 8, 8};
 Type *ty_ldouble = &(Type){TY_LDOUBLE, 16, 16};
 
 static Type *new_type(TypeKind kind, int size, int align) {
-  Type *ty = calloc(1, sizeof(Type));
+  Type *ty = scratch_calloc(1, sizeof(Type));
   ty->kind = kind;
   ty->size = size;
   ty->align = align;
@@ -83,12 +83,14 @@ bool is_compatible(Type *t1, Type *t2) {
       return false;
     return t1->array_len < 0 && t2->array_len < 0 &&
            t1->array_len == t2->array_len;
+  default:
+    return false;
   }
-  return false;
+  assert(!"unreachable");
 }
 
 Type *copy_type(Type *ty) {
-  Type *ret = calloc(1, sizeof(Type));
+  Type *ret = scratch_calloc(1, sizeof(Type));
   *ret = *ty;
   ret->origin = ty;
   return ret;
@@ -302,6 +304,8 @@ void add_type(Node *node) {
     if (node->lhs->ty->kind != TY_PTR)
       error_tok(node->cas_addr->tok, "pointer expected");
     node->ty = node->lhs->ty->base;
+    return;
+  default:
     return;
   }
 }
