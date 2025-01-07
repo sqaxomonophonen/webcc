@@ -3,9 +3,11 @@ set -e
 
 usage() {
   echo "Usage:"
-  echo " $0 <clang|webcc|cli> ..."
+  echo " $0 <clang|webcc|cli|unittest> ..."
   echo " $0 clang <clang-binary> <wasm-ld-binary>"
-  echo " $0 webcc ..."
+  echo " $0 webcc"
+  echo " $0 cli"
+  echo " $0 unittest"
   exit 1
 }
 
@@ -14,7 +16,6 @@ wasm_units="wasm_lib libc_anypct_wasm32 $common_units"
 cli_units="cli_main $common_units"
 
 wasm_artifact="webcc.wasm"
-cli_artifact="webcc"
 
 wasm_ld_opts="--no-entry --import-memory --export-dynamic"
 
@@ -43,8 +44,14 @@ webcc)
   link="$link $wasm_ld_opts"
   ;;
 cli)
-  artifact="$cli_artifact"
+  artifact="webcc"
   units="$cli_units"
+  link="cc"
+  ;;
+unittest)
+  OPT=${OPT:-"-O0 -g"}
+  artifact="unittest"
+  units="unittest $common_units"
   link="cc"
   ;;
 *)
@@ -52,7 +59,7 @@ cli)
   ;;
 esac
 
-OPT="-O2"
+OPT=${OPT:-"-O2"}
 COMMON_CFLAGS="${OPT} -std=c11 -Wall"
 NATIVE_CFLAGS="-DUSE_LIBC"
 WASM_CFLAGS="-DUSE_LIBC_ANYPCT_WASM32"
@@ -74,7 +81,7 @@ CC() {
     echo "TODO"
     exit 2
     ;;
-  cli)
+  cli|unittest)
     set -x
     cc \
       $COMMON_CFLAGS \
@@ -100,5 +107,7 @@ done
 set -x
 $link ${objs} -o ${artifact}
 set +x
+# XXX gzip size is interesting. especially for .wasm since it's indicative of
+# "over the wire" size. but do we want it for all targets?
 gzip -fk9 ${artifact}
 ls -l ${artifact} ${artifact}.gz

@@ -20,6 +20,15 @@ noreturn void error(char *fmt, ...) {
   abort();
 }
 
+int errorf(const char* fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  int n = verrorf(fmt, ap);
+  va_end(ap);
+  return n;
+}
+
 // Reports an error message in the following format.
 //
 // foo.c:10: x = y + 1;
@@ -679,7 +688,7 @@ char* normalize_source_string(char* p, size_t cap)
   // If exists, just skip them because they are useless bytes.
   // (It is actually not recommended to add BOM markers to UTF-8
   // texts, but it's not uncommon particularly on Windows.)
-  if (!memcmp(p, "\xef\xbb\xbf", 3)) p += 3;
+  if (!memcmp(p, "\xef\xbb\xbf", 3)) p+=3;
 
   { // Replace \r or \r\n with \n.
     // NOTE(aks) came from old canonicalize_newline() function
@@ -725,36 +734,39 @@ char* normalize_source_string(char* p, size_t cap)
 
   char* end = NULL;
   { // Replace \u or \U escape sequences with corresponding UTF-8 bytes.
-    // NOTE(aks) came from old convert_universal_chars() function
-    char *q = p;
-    while (*p) {
-      if (startswith(p, "\\u")) {
-        uint32_t c = read_universal_char(p + 2, 4);
+    // NOTE(aks) this came from old convert_universal_chars() function.
+    // XXX(aks) this seemingly also converts escapes /outside/ of strings? :)
+    char* q = p;
+    char* pp = p;
+    while (*pp) {
+      if (startswith(pp, "\\u")) {
+        uint32_t c = read_universal_char(pp + 2, 4);
         if (c) {
-          p += 6;
+          pp += 6;
           q += encode_utf8(q, c);
         } else {
-          *q++ = *p++;
+          *q++ = *pp++;
         }
-      } else if (startswith(p, "\\U")) {
-        uint32_t c = read_universal_char(p + 2, 8);
+      } else if (startswith(pp, "\\U")) {
+        uint32_t c = read_universal_char(pp + 2, 8);
         if (c) {
-          p += 10;
+          pp += 10;
           q += encode_utf8(q, c);
         } else {
-          *q++ = *p++;
+          *q++ = *pp++;
         }
-      } else if (p[0] == '\\') {
-        *q++ = *p++;
-        *q++ = *p++;
+      } else if (pp[0] == '\\') {
+        *q++ = *pp++;
+        *q++ = *pp++;
       } else {
-        *q++ = *p++;
+        *q++ = *pp++;
       }
     }
 
     *q = '\0';
     end = q;
   }
+
   assert(end >= p);
 
   // Make sure that the last line is properly terminated with '\n'.
@@ -792,12 +804,3 @@ Token *tokenize_file(char *path) {
 
   return tokenize(file);
 }
-
-#ifdef UNIT_TEST
-int main(void)
-{
-  // TODO test normalize_source_string()
-  printf("OK\n");
-  return 0;
-}
-#endif

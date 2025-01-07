@@ -1,8 +1,14 @@
 *.o
 *.wasm
+*.gz
+unittest
+webcc
 
 # for your temporary files: notes, etc
 tmp/
 
 # vim swap files
 .*swp
+
+# core dumps
+*.core

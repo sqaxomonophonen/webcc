@@ -20,15 +20,6 @@ int verrorf(const char* fmt, va_list ap)
   assert(!"TODO");
 }
 
-int errorf(const char* fmt, ...)
-{
-  va_list ap;
-  va_start(ap, fmt);
-  int n = verrorf(fmt, ap);
-  va_end(ap);
-  return n;
-}
-
 int main(int argc, char** argv)
 {
   printf("hello world (TODO)\n");

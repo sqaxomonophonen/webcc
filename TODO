@@ -22,11 +22,23 @@ hodgepodge description:
 
 
 more:
+
  - extract source normalization? (canonicalize_newline,
    remove_backslash_newline, convert_universal_chars). reasons: builtin header
    sources should be read-only, so attempts at normalization ought to crash.
    also, normalization can be done once for often included headers?
+
  - wasm/self-hosted unit tests (and tests in general?); right now they only run
    natively. NOTE this should probably support both clang and webcc WASM
    builds. clang builds test against platform differences (like 4-vs-8 byte
    pointers), while webcc builds also test for webcc/chibicc compiler bugs.
+
+ - stability/stage tests? the idea is to repeatedly build webcc:
+    webcc(0) built with clang
+    webcc(1) built with webcc(0)
+    webcc(2) built with webcc(1)
+    etc.
+   I expect the file hashes of webcc(1+) to be the same, but if something
+   subtle/fishy is going on (like reordering) it might not? if only webcc(2+)
+   is stable then the subtleties are harmless? in any case it's good to know?
+
