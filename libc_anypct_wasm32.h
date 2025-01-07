@@ -1,7 +1,5 @@
 #ifndef LIBC_ANYPCT_WASM32_H
 
-#include "stb_sprintf.h"
-
 #ifndef __wasm32__
 #error "not wasm32"
 // one reason this is not usable outside wasm32: it uses __builtin_memcpy for
@@ -27,12 +25,12 @@ noreturn void anypct_handle_failed_assertion(const char* failed_predicate, const
 
 #define abort __builtin_trap
 
-int ispunct(int c);
-int isxdigit(int c);
 int isspace(int c);
-int isdigit(int c);
+int ispunct(int c);
 int isalpha(int c);
 int isalnum(int c);
+int isdigit(int c);
+int isxdigit(int c);
 
 unsigned long strtoul(const char* nptr, char** endptr, int base);
 double strtod(const char* restrict nptr, char** restrict endptr);

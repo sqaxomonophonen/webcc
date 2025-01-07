@@ -24,6 +24,7 @@
 #error "missing USE_* define"
 #endif
 
+#include "stb_sprintf.h"
 #include "webcc.h"
 
 #define MAX(x, y) ((x) < (y) ? (y) : (x))
