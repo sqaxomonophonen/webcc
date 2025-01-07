@@ -27,12 +27,11 @@ noreturn void anypct_handle_failed_assertion(const char* failed_predicate, const
 
 #define abort __builtin_trap
 
-// direct implementations
-
 int ispunct(int c);
 int isxdigit(int c);
 int isspace(int c);
 int isdigit(int c);
+int isalpha(int c);
 int isalnum(int c);
 
 unsigned long strtoul(const char* nptr, char** endptr, int base);
@@ -47,6 +46,11 @@ char* strncpy(char* restrict dst, const char* restrict src, size_t len);
 int strncasecmp(const char* s1, const char* s2, size_t len);
 char* strstr(const char* big, const char* little);
 char* strchr(const char* s, int c);
+
+// XXX below this line are functions that are not directly referenced, but that
+// may be referenced through optimizations.
+
+void* memchr(const void* b, int c, size_t len);
 
 #define LIBC_ANYPCT_WASM32_H
 #endif
