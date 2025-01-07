@@ -20,7 +20,7 @@ noreturn void anypct_handle_failed_assertion(const char* failed_predicate, const
 #define assert(p) if (!(p)) { anypct_handle_failed_assertion(#p, __FILE__ ":" ANYPCT_STR(__LINE__)); }
 
 #define memcpy  __builtin_memcpy // -> memory.copy
-#define memmove __builtin_memcpy // -> memory.copy
+#define memmove __builtin_memcpy // -> memory.copy (has memmove semantics)
 #define memset  __builtin_memset // -> memory.fill
 
 #define abort __builtin_trap

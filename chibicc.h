@@ -25,7 +25,14 @@
 #endif
 
 #include "stb_sprintf.h"
-#include "webcc.h"
+
+// common interface between wasm library and native cli builds
+int verrorf(const char* fmt, va_list ap);
+int errorf(const char* fmt, ...);
+void* scratch_calloc(size_t number, size_t size);
+void* scratch_realloc(void* ptr, size_t size);
+char* get_source_file(char* filename);
+
 
 #define MAX(x, y) ((x) < (y) ? (y) : (x))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -112,6 +119,7 @@ File **get_input_files(void);
 File *new_file(char *name, int file_no, char *contents);
 Token *tokenize_string_literal(Token *tok, Type *basety);
 Token *tokenize(File *file);
+char* normalize_source_string(char* p, size_t cap);
 Token *tokenize_file(char *filename);
 
 #define unreachable() \
@@ -121,7 +129,9 @@ Token *tokenize_file(char *filename);
 // preprocess.c
 //
 
+#if 0
 char *search_include_paths(char *filename);
+#endif
 void init_macros(void);
 void define_macro(char *name, char *buf);
 void undef_macro(char *name);

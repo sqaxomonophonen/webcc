@@ -638,15 +638,6 @@ Token *tokenize(File *file) {
 static char *read_file(char *path)
 {
   assert(!"TODO");
-  // TODO port this:
-  #if 0
-  // Make sure that the last line is properly terminated with '\n'.
-  fflush(out);
-  if (buflen == 0 || buf[buflen - 1] != '\n')
-    fputc('\n', out);
-  fputc('\0', out);
-  fclose(out);
-  #endif
 }
 
 File **get_input_files(void) {
@@ -662,52 +653,6 @@ File *new_file(char *name, int file_no, char *contents) {
   return file;
 }
 
-// Replaces \r or \r\n with \n.
-static void canonicalize_newline(char *p) {
-  int i = 0, j = 0;
-
-  while (p[i]) {
-    if (p[i] == '\r' && p[i + 1] == '\n') {
-      i += 2;
-      p[j++] = '\n';
-    } else if (p[i] == '\r') {
-      i++;
-      p[j++] = '\n';
-    } else {
-      p[j++] = p[i++];
-    }
-  }
-
-  p[j] = '\0';
-}
-
-// Removes backslashes followed by a newline.
-static void remove_backslash_newline(char *p) {
-  int i = 0, j = 0;
-
-  // We want to keep the number of newline characters so that
-  // the logical line number matches the physical one.
-  // This counter maintain the number of newlines we have removed.
-  int n = 0;
-
-  while (p[i]) {
-    if (p[i] == '\\' && p[i + 1] == '\n') {
-      i += 2;
-      n++;
-    } else if (p[i] == '\n') {
-      p[j++] = p[i++];
-      for (; n > 0; n--)
-        p[j++] = '\n';
-    } else {
-      p[j++] = p[i++];
-    }
-  }
-
-  for (; n > 0; n--)
-    p[j++] = '\n';
-  p[j] = '\0';
-}
-
 static uint32_t read_universal_char(char *p, int len) {
   uint32_t c = 0;
   for (int i = 0; i < len; i++) {
@@ -718,53 +663,122 @@ static uint32_t read_universal_char(char *p, int len) {
   return c;
 }
 
-// Replace \u or \U escape sequences with corresponding UTF-8 bytes.
-static void convert_universal_chars(char *p) {
-  char *q = p;
+// Normalizes C-source string `p` and returns it.
+// `cap` must be the capacity of the `p`-allocation; so at least `strlen(p)+1`.
+// It works inline unless the normalized string requires more storage than
+// `cap` in which case a new string is allocated.
+// The normalizations are:
+//  - Remove leading UTF-8 BOM if present
+//  - Remove backslashes followed by newline (cleverly re-inserts newlines so
+//    that line numbers are not "corrupted")
+//  - Converts unicode escapes to UTF-8 chars (e.g. "\u00f8" => "ø")
+//  - Inserts newline on last line if missing.
+char* normalize_source_string(char* p, size_t cap)
+{
+  // UTF-8 texts may start with a 3-byte "BOM" marker sequence.
+  // If exists, just skip them because they are useless bytes.
+  // (It is actually not recommended to add BOM markers to UTF-8
+  // texts, but it's not uncommon particularly on Windows.)
+  if (!memcmp(p, "\xef\xbb\xbf", 3)) p += 3;
 
-  while (*p) {
-    if (startswith(p, "\\u")) {
-      uint32_t c = read_universal_char(p + 2, 4);
-      if (c) {
-        p += 6;
-        q += encode_utf8(q, c);
+  { // Replace \r or \r\n with \n.
+    // NOTE(aks) came from old canonicalize_newline() function
+    int i=0, j=0;
+    while (p[i]) {
+      if (p[i] == '\r' && p[i + 1] == '\n') {
+        i += 2;
+        p[j++] = '\n';
+      } else if (p[i] == '\r') {
+        i++;
+        p[j++] = '\n';
       } else {
-        *q++ = *p++;
+        p[j++] = p[i++];
       }
-    } else if (startswith(p, "\\U")) {
-      uint32_t c = read_universal_char(p + 2, 8);
-      if (c) {
-        p += 10;
-        q += encode_utf8(q, c);
-      } else {
-        *q++ = *p++;
-      }
-    } else if (p[0] == '\\') {
-      *q++ = *p++;
-      *q++ = *p++;
-    } else {
-      *q++ = *p++;
     }
+    p[j] = '\0';
   }
 
-  *q = '\0';
+  { // Remove backslashes followed by a newline.
+    // We want to keep the number of newline characters so that
+    // the logical line number matches the physical one.
+    // This counter maintain the number of newlines we have removed.
+    // NOTE(aks) came from old remove_backslash_newline() function
+    int n = 0;
+    int i=0, j=0;
+    while (p[i]) {
+      if (p[i] == '\\' && p[i + 1] == '\n') {
+        i += 2;
+        n++;
+      } else if (p[i] == '\n') {
+        p[j++] = p[i++];
+        for (; n > 0; n--)
+          p[j++] = '\n';
+      } else {
+        p[j++] = p[i++];
+      }
+    }
+
+    for (; n > 0; n--)
+      p[j++] = '\n';
+    p[j] = '\0';
+  }
+
+  char* end = NULL;
+  { // Replace \u or \U escape sequences with corresponding UTF-8 bytes.
+    // NOTE(aks) came from old convert_universal_chars() function
+    char *q = p;
+    while (*p) {
+      if (startswith(p, "\\u")) {
+        uint32_t c = read_universal_char(p + 2, 4);
+        if (c) {
+          p += 6;
+          q += encode_utf8(q, c);
+        } else {
+          *q++ = *p++;
+        }
+      } else if (startswith(p, "\\U")) {
+        uint32_t c = read_universal_char(p + 2, 8);
+        if (c) {
+          p += 10;
+          q += encode_utf8(q, c);
+        } else {
+          *q++ = *p++;
+        }
+      } else if (p[0] == '\\') {
+        *q++ = *p++;
+        *q++ = *p++;
+      } else {
+        *q++ = *p++;
+      }
+    }
+
+    *q = '\0';
+    end = q;
+  }
+  assert(end >= p);
+
+  // Make sure that the last line is properly terminated with '\n'.
+  if (end > p && end[-1] != '\n') {
+    // NOTE(aks) came from old read_file() function
+    size_t n = end-p;
+    size_t req = n+2;
+    if (req > cap) {
+      // not enough capacity; allocate new string and copy it
+      char* new_p = scratch_calloc(req, 1);
+      memcpy(new_p, p, n);
+      p = new_p;
+    }
+    p[n] = '\n';
+    p[n+1] = 0;
+  }
+
+  return p;
 }
 
 Token *tokenize_file(char *path) {
   char *p = read_file(path);
   if (!p)
     return NULL;
-
-  // UTF-8 texts may start with a 3-byte "BOM" marker sequence.
-  // If exists, just skip them because they are useless bytes.
-  // (It is actually not recommended to add BOM markers to UTF-8
-  // texts, but it's not uncommon particularly on Windows.)
-  if (!memcmp(p, "\xef\xbb\xbf", 3))
-    p += 3;
-
-  canonicalize_newline(p);
-  remove_backslash_newline(p);
-  convert_universal_chars(p);
 
   // Save the filename for assembler .file directive.
   static int file_no;
@@ -778,3 +792,12 @@ Token *tokenize_file(char *path) {
 
   return tokenize(file);
 }
+
+#ifdef UNIT_TEST
+int main(void)
+{
+  // TODO test normalize_source_string()
+  printf("OK\n");
+  return 0;
+}
+#endif

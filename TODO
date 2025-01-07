@@ -1,14 +1,14 @@
 
- - codegen.c => WASM!
+ codegen.c => WASM!
 
- - optimizations?
-   - surprise: chibicc doesn't do constant folding? i.e. `return 10*20;` will
-     generate code that multiplies 10 with 20. this is surprising because
-     `int xs[10*20];` actually works properly; it calculates the size of xs[]
-     at compile-time. see also: test/constexpr.c
-   - switch/case? analyse cases and choose a strategy? like: simple if/else;
-     jump tables; binary search if/else? the self-hosted compiler could benefit
-     from this.
+ optimizations?
+ - surprise: chibicc doesn't do constant folding? i.e. `return 10*20;` will
+   generate code that multiplies 10 with 20. this is surprising because `int
+   xs[10*20];` actually works properly; it calculates the size of xs[] at
+   compile-time. see also: test/constexpr.c
+ - switch/case? analyse cases and choose a strategy? (or several?) like: simple
+   if/else; jump tables; binary search if/else? the self-hosted compiler could
+   benefit from this.
 
 
 hodgepodge description:
@@ -26,3 +26,7 @@ more:
    remove_backslash_newline, convert_universal_chars). reasons: builtin header
    sources should be read-only, so attempts at normalization ought to crash.
    also, normalization can be done once for often included headers?
+ - wasm/self-hosted unit tests (and tests in general?); right now they only run
+   natively. NOTE this should probably support both clang and webcc WASM
+   builds. clang builds test against platform differences (like 4-vs-8 byte
+   pointers), while webcc builds also test for webcc/chibicc compiler bugs.

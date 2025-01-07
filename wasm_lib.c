@@ -1,15 +1,13 @@
 #include "chibicc.h"
 
-char *base_file; // XXX?
+#define PLEASE_EXPORT __attribute__((visibility("default")))
 
-PLEASE_EXPORT void webcc0(void)
-{
-	init_macros();
-}
+char *base_file; // XXX?
 
 PLEASE_EXPORT void webcc(char* fn)
 {
   // TODO XXX
+  init_macros();
   Token* tok = tokenize_file(fn);
   tok = preprocess(tok);
   Obj *prog = parse(tok);
@@ -35,3 +33,4 @@ int errorf(const char* fmt, ...)
 {
   assert(!"TODO");
 }
+

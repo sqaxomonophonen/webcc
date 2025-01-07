@@ -68,7 +68,9 @@ struct Hideset {
 static HashMap macros;
 static CondIncl *cond_incl;
 static HashMap pragma_once;
+#if 0
 static int include_next_idx;
+#endif
 
 static Token *preprocess2(Token *tok);
 static Macro *find_macro(Token *tok);
@@ -682,6 +684,7 @@ static bool expand_macro(Token **rest, Token *tok) {
   return true;
 }
 
+#if 0
 char *search_include_paths(char *filename) {
   if (filename[0] == '/')
     return filename;
@@ -702,6 +705,7 @@ char *search_include_paths(char *filename) {
   }
   return NULL;
 }
+#endif
 
 #if 0
 static char *search_include_next(char *filename) {
@@ -1071,7 +1075,6 @@ static char *format_time(struct tm *tm) {
 
 void init_macros(void) {
   // Define predefined macros
-  define_macro("_LP64", "1");
   define_macro("__C99_MACRO_WITH_VA_ARGS", "1");
   define_macro("__SIZEOF_DOUBLE__", "8");
   define_macro("__SIZEOF_FLOAT__", "4");
@@ -1092,7 +1095,6 @@ void init_macros(void) {
   define_macro("__STDC__", "1");
   define_macro("__USER_LABEL_PREFIX__", "");
   define_macro("__alignof__", "_Alignof");
-  define_macro("__chibicc__", "1");
   define_macro("__webcc__", "1");
   define_macro("__const__", "const");
   define_macro("__inline__", "inline");
