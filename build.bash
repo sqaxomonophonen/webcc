@@ -62,4 +62,5 @@ for u in $units ; do
 done
 
 wasm-ld --no-entry --import-memory --export-dynamic ${objs} -o webcc.wasm
-ls -l webcc.wasm
+gzip -fk9 webcc.wasm
+ls -l webcc.wasm*

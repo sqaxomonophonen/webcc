@@ -1,28 +1,6 @@
 
  - codegen.c => WASM!
 
- - remove dependency on file system (when running in a WASM VM,
-   #include-statements should be served from memory). look for uses of file
-   functions outside of main.c: fopen(), fclose(), open_memstream(), fread(),
-   fputc()... and FILE*
-   ...
-
- - remove stuff
-   - the preprocessor supports __TIMESTAMP__ that depends on ctime().. I could
-     probably remove this stuff (maybe replace with a "TODO error" to better
-     detect code that might use __TIMESTAMP__)
-
- - minimal "libc" for selfhosting
-   - realloc(),calloc() => scratch allocator (free() is already not called; an
-     excellent chibicc design choice)
-   - memset(),memcpy() => memory.fill,memory.copy
-   - assert() => impl+trap
-   - implementations of strlen(), strcmp(), strncmp(), memcmp(), strncpy(),
-     strndup(), strdup(), ...?
-   - *printf() - probably use stb_sprintf.h? (used for error reporting and
-     stuff)
-   - strtold()
-
  - optimizations?
    - surprise: chibicc doesn't do constant folding? i.e. `return 10*20;` will
      generate code that multiplies 10 with 20. this is surprising because
@@ -31,11 +9,3 @@
    - switch/case? analyse cases and choose a strategy? like: simple if/else;
      jump tables; binary search if/else? the self-hosted compiler could benefit
      from this.
-
-also:
- - two modes: run as a library (primary use case), or run as a CLI program
-   (testing, tooling)
-
-decide:
- - what should I do with "linking"?
-

@@ -157,6 +157,11 @@ char *format(char *fmt, ...) {
   return buf;
 }
 
+void* scratch_calloc(size_t number, size_t size)
+{
+  return calloc(number, size);
+}
+
 int main(void)
 {
   HashMap *map = calloc(1, sizeof(HashMap));
