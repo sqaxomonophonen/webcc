@@ -27,7 +27,8 @@ static void usage(const char* error)
   FILE* out = error != NULL ? stderr : stdout;
   if (error != NULL) fprintf(out, "%s\n", error);
   fprintf(out, "Usage:\n");
-  fprintf(out, "   %s <build|run> <target>\n", prg);
+  fprintf(out, "   %s build <target>\n", prg);
+  fprintf(out, "   %s run <target> [args]...\n", prg);
   fprintf(out, "   %s set <key> <value> [key] [value]...\n", prg);
 
   fprintf(out, "\nConfig:\n");
@@ -35,6 +36,20 @@ static void usage(const char* error)
   EMIT_CFGS
   #undef X
   fprintf(out, "(change with \"set\"-command)\n");
+
+  fprintf(out, "\nwebcc targets:\n");
+  fprintf(out, "   webcc               natively built\n");
+  fprintf(out, "   webcc0w.wasm        built with clang --target=wasm32\n");
+  fprintf(out, "   webcc<N>w.wasm      built with webcc<N-1>w.wasm (for N>=1)\n");
+  fprintf(out, "   webcc1n.wasm        built with webcc\n");
+  fprintf(out, "   webcc<N>n.wasm      built with webcc<N-1>n.wasm (for N>=2)\n");
+
+  fprintf(out, "\ntest targets:\n");
+  fprintf(out, "   unittest            unittest.c native build\n");
+  fprintf(out, "   unittest.<CC>.wasm  built with <CC>\n");
+  fprintf(out, "   test.<T>            test/<T>.c native build\n");
+  fprintf(out, "   test.<T>.<CC>.wasm  built with <CC>\n");
+  fprintf(out, "<CC> can be one of the webcc target names, or \"clang\"\n\n");
 
   exit(error != NULL ? EXIT_FAILURE : EXIT_SUCCESS);
 }
