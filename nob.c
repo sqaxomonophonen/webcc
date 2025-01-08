@@ -15,13 +15,10 @@ static void usage(const char* error)
   FILE* out = error != NULL ? stderr : stdout;
   if (error != NULL) fprintf(out, "%s\n", error);
   fprintf(out, "Usage:\n");
-  fprintf(out, "   %s config [...]\n", prg);
-  fprintf(out, "   %s <cmd>\n", prg);
-  fprintf(out, "   %s <cmd>\n", prg);
+  fprintf(out, "   %s <build|run> <target>\n", prg);
+  fprintf(out, "   %s <set> <key> <value> [key] [value]\n", prg);
   exit(error != NULL ? EXIT_FAILURE : EXIT_SUCCESS);
 }
-
-#define DD(x) printf("%s=[%s]\n",#x,x)
 
 #ifndef CLANG_BIN
 #define CLANG_BIN "clang"
@@ -31,18 +28,43 @@ static void usage(const char* error)
 #define WASM_LD_BIN "wasm-ld"
 #endif
 
+#define EMIT_CFGS \
+  X(CLANG_BIN) \
+  X(WASM_LD_BIN)
+
 int main(int argc, char **argv)
 {
-   NOB_GO_DEFINE(CLANG_BIN);
-   NOB_GO_DEFINE(WASM_LD_BIN);
-   NOB_GO_REBUILD_URSELF(argc, argv);
-   for (int i=1; i<argc; i++) {
+  #define X(x) nob_go_define(#x, x);
+  EMIT_CFGS
+  #undef X
+  NOB_GO_REBUILD_URSELF(argc, argv);
+
+  prg = argv[0];
+  #define X(x) printf("%s=\"%s\"\n", #x, x);
+  EMIT_CFGS
+  #undef X
+
+  if (argc < 2) usage("");
+
+  if (strcmp("build", argv[1]) == 0) {
+    assert(!"TODO");
+  } else if (strcmp("run", argv[1]) == 0) {
+    assert(!"TODO");
+  } else if (strcmp("set", argv[1]) == 0) {
+    for (int i=2; i<(argc-1); i+=2) {
       char* arg = argv[i];
-	  #define CFG(x) if (strlen(argv[i]) >= (1+strlen(#x)) && 0 == memcmp(arg, #x "=", (1+strlen(#x)))) NOB_GO_REDEFINE_STR(#x, arg+(1+strlen(#x)));
-	  CFG(CLANG_BIN)
-	  CFG(WASM_LD_BIN)
-	  #undef CFG
-   }
-   DD(CLANG_BIN);
-   DD(WASM_LD_BIN);
+      char* val = argv[i+1];
+      int match = 0;
+      #define X(x) if (strcmp(arg,#x)==0) { match=1; NOB_GO_REDEFINE_STR(#x, val); }
+      EMIT_CFGS
+      #undef X
+      if (!match) {
+        fprintf(stderr, "no such config key \"%s\"\n", arg);
+        exit(EXIT_FAILURE);
+      }
+    }
+  } else {
+    usage("invalid command");
+  }
+  return EXIT_SUCCESS;
 }
