@@ -95,28 +95,29 @@ static void test_normalize_source_string(void)
   }
 }
 
-void run_tests(void)
+void test_all(void)
 {
   test_hashmap();
   test_normalize_source_string();
+  init_macros(); // XXX not really a test?
 }
 
 #if defined( USE_LIBC )
 
 int main(int argc, char** argv)
 {
-  run_tests();
+  test_all();
   printf("unittest OK\n");
   return 0;
 }
 
 #elif defined( USE_LIBC_ANYPCT_WASM32 )
 
-#error "TODO!"
-// yes TODO! this is important:
-//  - clang-compiled .wasm unittest tests against platform differences (e.g.
-//    sizeof(void*) may differ)
-//  - webcc-compiled .wasm unittest /also/ tests the compiler
+__attribute__((visibility("default")))
+void run_tests(void)
+{
+	test_all();
+}
 
 #else
 #error "missing USE_* define"

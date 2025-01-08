@@ -17,11 +17,12 @@ void* scratch_realloc(void* ptr, size_t size)
 
 int verrorf(const char* fmt, va_list ap)
 {
-  assert(!"TODO");
+  return vfprintf(stderr, fmt, ap);
 }
 
 int main(int argc, char** argv)
 {
-  printf("hello world (TODO)\n");
+  init_macros();
+  tokenize_file("parse.c");
   return 0;
 }
