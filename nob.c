@@ -33,16 +33,16 @@ static void usage(const char* error)
 
 int main(int argc, char **argv)
 {
-   NOB_GO_DEFINE(CLANG_BIN); 
+   NOB_GO_DEFINE(CLANG_BIN);
    NOB_GO_DEFINE(WASM_LD_BIN);
    NOB_GO_REBUILD_URSELF(argc, argv);
-   #if 0
    for (int i=1; i<argc; i++) {
       char* arg = argv[i];
-      if (strlen(argv[i]) >= 4 && 0 == memcmp(arg, "FOO=", 4)) NOB_GO_REDEFINE(FOO, arg+4);
-      if (strlen(argv[i]) >= 4 && 0 == memcmp(arg, "BAR=", 4)) NOB_GO_REDEFINE(BAR, arg+4);
+	  #define CFG(x) if (strlen(argv[i]) >= (1+strlen(#x)) && 0 == memcmp(arg, #x "=", (1+strlen(#x)))) NOB_GO_REDEFINE_STR(#x, arg+(1+strlen(#x)));
+	  CFG(CLANG_BIN)
+	  CFG(WASM_LD_BIN)
+	  #undef CFG
    }
-   DD(FOO);
-   DD(BAR);
-   #endif
+   DD(CLANG_BIN);
+   DD(WASM_LD_BIN);
 }
