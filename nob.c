@@ -9,17 +9,6 @@
 #define NOB_IMPLEMENTATION
 #include "nob.h"
 
-char* prg;
-static void usage(const char* error)
-{
-  FILE* out = error != NULL ? stderr : stdout;
-  if (error != NULL) fprintf(out, "%s\n", error);
-  fprintf(out, "Usage:\n");
-  fprintf(out, "   %s <build|run> <target>\n", prg);
-  fprintf(out, "   %s <set> <key> <value> [key] [value]\n", prg);
-  exit(error != NULL ? EXIT_FAILURE : EXIT_SUCCESS);
-}
-
 #ifndef CLANG_BIN
 #define CLANG_BIN "clang"
 #endif
@@ -32,6 +21,24 @@ static void usage(const char* error)
   X(CLANG_BIN) \
   X(WASM_LD_BIN)
 
+char* prg;
+static void usage(const char* error)
+{
+  FILE* out = error != NULL ? stderr : stdout;
+  if (error != NULL) fprintf(out, "%s\n", error);
+  fprintf(out, "Usage:\n");
+  fprintf(out, "   %s <build|run> <target>\n", prg);
+  fprintf(out, "   %s set <key> <value> [key] [value]...\n", prg);
+
+  fprintf(out, "\nConfig:\n");
+  #define X(x) fprintf(out, "  %s=\"%s\"\n", #x, x);
+  EMIT_CFGS
+  #undef X
+  fprintf(out, "(change with \"set\"-command)\n");
+
+  exit(error != NULL ? EXIT_FAILURE : EXIT_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   #define X(x) nob_go_define(#x, x);
@@ -40,9 +47,6 @@ int main(int argc, char **argv)
   NOB_GO_REBUILD_URSELF(argc, argv);
 
   prg = argv[0];
-  #define X(x) printf("%s=\"%s\"\n", #x, x);
-  EMIT_CFGS
-  #undef X
 
   if (argc < 2) usage("");
 
@@ -51,6 +55,10 @@ int main(int argc, char **argv)
   } else if (strcmp("run", argv[1]) == 0) {
     assert(!"TODO");
   } else if (strcmp("set", argv[1]) == 0) {
+    if ((argc % 2) != 0) {
+        fprintf(stderr, "odd number of \"set\"-arguments; must come in key/value pairs\n");
+        exit(EXIT_FAILURE);
+    }
     for (int i=2; i<(argc-1); i+=2) {
       char* arg = argv[i];
       char* val = argv[i+1];
