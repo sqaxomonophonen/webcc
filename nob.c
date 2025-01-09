@@ -62,11 +62,11 @@ char* prg;
 static void print_webcc_targets(FILE* out)
 {
   fprintf(out, "webcc (C-to-WASM compiler) targets:\n");
-  fprintf(out, "   webcc               native binary, built with system compiler (" SYSTEM_CC ")\n");
-  fprintf(out, "   webcc0w.wasm        built with clang --target=wasm32\n");
-  fprintf(out, "   webcc<N>w.wasm      built with webcc<N-1>w.wasm (for 1<=N<=9)\n");
-  fprintf(out, "   webcc1n.wasm        built with webcc\n");
-  fprintf(out, "   webcc<N>n.wasm      built with webcc<N-1>n.wasm (for 2<=N<=9)\n");
+  fprintf(out, "  webcc               native binary, built with system compiler (" SYSTEM_CC ")\n");
+  fprintf(out, "  webcc0w.wasm        built with clang --target=wasm32\n");
+  fprintf(out, "  webcc<N>w.wasm      built with webcc<N-1>w.wasm (for 1<=N<=9)\n");
+  fprintf(out, "  webcc1n.wasm        built with webcc\n");
+  fprintf(out, "  webcc<N>n.wasm      built with webcc<N-1>n.wasm (for 2<=N<=9)\n");
 }
 
 static void usage(const char* error)
@@ -75,10 +75,10 @@ static void usage(const char* error)
   if (error != NULL) fprintf(out, "%s\n\n", error);
 
   fprintf(out, "Usage:\n");
-  fprintf(out, "   %s build <target>\n", prg);
-  fprintf(out, "   %s run <target> [args]...\n", prg);
-  fprintf(out, "   %s set <key> <value> [key] [value]...\n", prg);
-  fprintf(out, "   %s export_config\n", prg);
+  fprintf(out, "  %s build <target>\n", prg);
+  fprintf(out, "  %s run <target> [args]...\n", prg);
+  fprintf(out, "  %s set <key> <value> [key] [value]...\n", prg);
+  fprintf(out, "  %s export_config\n", prg);
   fprintf(out, "\n");
 
   fprintf(out, "Config:\n");
@@ -91,10 +91,10 @@ static void usage(const char* error)
   fprintf(out, "\n");
 
   fprintf(out, "test targets:\n");
-  fprintf(out, "   unittest            unittest.c native build\n");
-  fprintf(out, "   unittest.<CC>.wasm  built with <CC>\n");
-  fprintf(out, "   test.<T>            test/<T>.c native build\n");
-  fprintf(out, "   test.<T>.<CC>.wasm  built with <CC>\n");
+  fprintf(out, "  unittest            unittest.c native build\n");
+  fprintf(out, "  unittest.<CC>.wasm  built with <CC>\n");
+  fprintf(out, "  test.<T>            test/<T>.c native build\n");
+  fprintf(out, "  test.<T>.<CC>.wasm  built with <CC>\n");
   fprintf(out, "<CC> is a webcc target name, or \"clang\" for clang --target=wasm32 build\n\n");
 
   exit(error != NULL ? EXIT_FAILURE : EXIT_SUCCESS);
