@@ -19,6 +19,7 @@ static const char* common_units[] = {
 };
 
 static const char* wasm_units[] = {
+  // XXX split? unittest*.wasm needs libc_anypct_wasm32 but not wasm_lib
   "wasm_lib",
   "libc_anypct_wasm32",
 };
@@ -27,11 +28,9 @@ static const char* cli_units[] = {
   "cli_main",
 };
 
-#if 0
 static const char* unittest_units[] = {
   "unittest",
 };
-#endif
 
 #ifndef CLANG_BIN
 #define CLANG_BIN "clang"
@@ -121,8 +120,8 @@ enum compiler_type {
 static enum compiler_type webcc_target_type;
 static int webcc_target_x;
 
-static enum compiler_type webcc_builder_type;
-static int webcc_builder_x;
+//static enum compiler_type webcc_builder_type;
+//static int webcc_builder_x;
 
 static int read_webcc_target(char* t, size_t tn)
 {
@@ -171,7 +170,6 @@ static int read_webcc_target(char* t, size_t tn)
   assert(!"unreachable");
 }
 
-
 Nob_Procs procs;
 
 static void do_cmd(Nob_Cmd cmd)
@@ -184,7 +182,6 @@ static void do_join(void)
 {
   nob_procs_wait_and_reset(&procs);
 }
-
 
 Nob_Cmd cflags;
 Nob_Cmd objs;
@@ -200,7 +197,6 @@ static void push_cdef(const char* def)
   // TODO windows?
   nob_cmd_append(&cflags, nob_temp_sprintf("-D%s", def));
 }
-
 
 static void cmd_opt(Nob_Cmd* cmd)
 {
@@ -317,18 +313,28 @@ static void artifact_stat(const char* artifact)
   if (!nob_cmd_run_sync(cmd)) exit(EXIT_FAILURE);
 }
 
-static void build_webcc(enum compiler_type target_type, int target_x)
+static void use_libc(void)
+{
+  push_cdef("USE_LIBC");
+}
+
+static void use_libc_anypct_wasm32(void)
+{
+  push_cdef("USE_LIBC_ANYPCT_WASM32");
+}
+
+static char* build_webcc(enum compiler_type target_type, int target_x)
 {
   #define HANDLE_UNITS(xs) for(size_t i=0;i<NOB_ARRAY_LEN(xs);i++) build_webcc_unit(target_type, target_x, (xs)[i]);
   reset();
   switch (target_type) {
   case WEBCC_NATIVE:
-    push_cdef("USE_LIBC");
+    use_libc();
     HANDLE_UNITS(cli_units)
     break;
   case WEBCC_Xw:
   case WEBCC_Xn:
-    push_cdef("USE_LIBC_ANYPCT_WASM32");
+    use_libc_anypct_wasm32();
     HANDLE_UNITS(wasm_units)
     break;
   default: assert(!"unreachable");
@@ -352,9 +358,30 @@ static void build_webcc(enum compiler_type target_type, int target_x)
   }
 
   artifact_stat(artifact);
+  return artifact;
 }
 
-static int webcc_builder_x;
+static int handle_unittest_target(char* t, size_t tn)
+{
+  const char* unittest = "unittest";
+  const size_t unittestn = strlen(unittest);
+  if (tn < unittestn || memcmp(t,unittest,unittestn) != 0) return 0;
+  if (strcmp("unittest", t) == 0) {
+    reset();
+    use_libc();
+    #define HANDLE_UNITS(xs) for(size_t i=0;i<NOB_ARRAY_LEN(xs);++i) build_system_cc_unit(xs[i]);
+    HANDLE_UNITS(common_units)
+    HANDLE_UNITS(unittest_units)
+    #undef HANDLE_UNITS
+    do_join();
+    link_native(t);
+    return 1;
+  } else {
+    assert(!"TODO"); // TODO
+  }
+  assert(!"unreachable");
+}
+
 
 int main(int argc, char **argv)
 {
@@ -371,16 +398,38 @@ int main(int argc, char **argv)
   const int is_run   = (strcmp("run",   argv[1]) == 0);
 
   if (is_build || is_run) {
-    if (argc != 3) usage("missing target");
+    if (argc < 3) usage("missing target");
+    if (is_build && argc > 3) usage("too many args");
     char* t = argv[2];
-    if (read_webcc_target(t, strlen(t))) {
-      build_webcc(webcc_target_type, webcc_target_x);
-      if (is_run) printf("TODO run\n");
+    const size_t tn = strlen(t);
+    char* artifact = NULL;
+    if (read_webcc_target(t, tn)) {
+      artifact = build_webcc(webcc_target_type, webcc_target_x);
       exit(EXIT_SUCCESS);
+    } else if (handle_unittest_target(t,tn)) {
+      artifact = t;
     } else {
       fprintf(stderr, "unhandled non-webcc target \"%s\" (TODO tests?)\n", t);
       exit(EXIT_FAILURE);
     }
+
+    if (is_run) {
+      switch (webcc_target_type) {
+      case WEBCC_NATIVE: {
+        Nob_Cmd cmd = {0};
+        nob_cmd_append(&cmd, nob_temp_sprintf("./%s", artifact));
+        for (int i=3; i < argc; i++) nob_cmd_append(&cmd, argv[i]);
+        if (!nob_cmd_run_sync(cmd)) exit(EXIT_FAILURE);
+      } break;
+      case WEBCC_Xw:
+      case WEBCC_Xn:
+        assert(!"TODO");
+        break;
+      default: assert(!"unreachable");
+      }
+    }
+
+    exit(EXIT_SUCCESS);
   } else if (strcmp("set", argv[1]) == 0) {
     if ((argc % 2) != 0) {
         fprintf(stderr, "odd number of \"set\"-arguments; must come in key/value pairs\n");
