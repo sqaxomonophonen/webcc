@@ -23,15 +23,39 @@ hodgepodge description:
 
 more:
 
- - extract source normalization? (canonicalize_newline,
-   remove_backslash_newline, convert_universal_chars). reasons: builtin header
-   sources should be read-only, so attempts at normalization ought to crash.
-   also, normalization can be done once for often included headers?
+
+ - build.bash should accept "any" compiler...? there's currently a bit of
+   combinatorial explosion going on because I'd like to build:
+     webcc.wasm
+     unittest.wasm
+     selftest.wasm, based on test/*.. or one .wasm per test?
+   and each should be compilable using:
+     clang
+     clang-built webcc(0)
+     webcc(0)-built webcc(1)
+     webcc(1)-built webcc(2)
+     etc
+   maybe I should also be able to set the artifact name so that I can build
+   webcc0.wasm, webcc1.wasm, etc...
+   this is also further complicated by annoying inconsistencies in clang
+   toolchain naming; I use clang19/wasm-ld on FreeBSD, clang-16/wasm-ld-16 on
+   Debian,... :-/
+   also even further complicated by native builds (relavant for both webcc and
+   unittest?)
+
+
+ - build.bash parallel builds? there are few enough files that I don't need a
+   process pool (max concurrency)? :) NOTE I may want to avoid doing
+   incremental builds unless .o files are also tagged with the compiler
+   version. otherwise foo.c will compile to foo.o regardless of target
+   (wasm32/native) and compiler used (clang/webcc(0)/webcc(1)/...)
+
 
  - wasm/self-hosted unit tests (and tests in general?); right now they only run
    natively. NOTE this should probably support both clang and webcc WASM
    builds. clang builds test against platform differences (like 4-vs-8 byte
    pointers), while webcc builds also test for webcc/chibicc compiler bugs.
+
 
  - stability/stage tests? the idea is to repeatedly build webcc:
     webcc(0) built with clang

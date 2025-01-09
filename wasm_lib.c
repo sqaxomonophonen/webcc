@@ -28,9 +28,3 @@ int verrorf(const char* fmt, va_list ap)
 {
   assert(!"TODO");
 }
-
-int errorf(const char* fmt, ...)
-{
-  assert(!"TODO");
-}
-
