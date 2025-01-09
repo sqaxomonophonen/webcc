@@ -23,6 +23,29 @@ int verrorf(const char* fmt, va_list ap)
 int main(int argc, char** argv)
 {
   init_macros();
-  tokenize_file("parse.c");
+  Token* tok = tokenize_file("stb_sprintf.h");
+  //Token* tok = tokenize_file("parse.c");
+  //Token* tok = tokenize_file("normalize.h");
+  tok = preprocess(tok);
+  printf("OK? %p\n", tok);
   return 0;
+}
+
+const char *read_source_file(const char *path)
+{
+  FILE* f = fopen(path, "rb");
+  if (f == NULL) {
+    fprintf(stderr, "%s: not found\n", path);
+    exit(EXIT_FAILURE);
+  }
+  assert(0 == fseek(f, 0, SEEK_END));
+  const long sz = ftell(f);
+  assert(0 == fseek(f, 0, SEEK_SET));
+  assert(0 == ftell(f));
+  const size_t cap = sz+16;
+  char* src = scratch_calloc(cap, 1);
+  assert(1 == fread(src, sz, 1, f));
+  fclose(f);
+  src = normalize_source_string(src, cap);
+  return src;
 }

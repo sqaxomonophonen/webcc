@@ -14,8 +14,8 @@ static const char* common_units[] = {
   "strings",
   "tokenize",
   "type",
-  "unicode",
   "codegen",
+  "gen_includes",
 };
 
 static const char* wasm_units[] = {
@@ -57,6 +57,9 @@ X(OPT)
 #define NOB_IMPLEMENTATION
 #include "nob.h"
 
+#define scratch_calloc calloc
+#include "normalize.h"
+
 char* prg;
 
 static void print_webcc_targets(FILE* out)
@@ -79,6 +82,7 @@ static void usage(const char* error)
   fprintf(out, "  %s run <target> [args]...\n", prg);
   fprintf(out, "  %s set <key> <value> [key] [value]...\n", prg);
   fprintf(out, "  %s export_config\n", prg);
+  fprintf(out, "  %s gen_includes.c\n", prg);
   fprintf(out, "\n");
 
   fprintf(out, "Config:\n");
@@ -398,6 +402,17 @@ static void run_artifact(char* artifact, int argc, char** argv)
   }
 }
 
+static int sb_printf(Nob_String_Builder* sb, const char* fmt, ...)
+{
+  char buf[1<<16];
+  va_list ap;
+  va_start(ap, fmt);
+  const int n = vsnprintf(buf, sizeof buf, fmt, ap);
+  va_end(ap);
+  nob_sb_append_cstr(sb, buf);
+  return n;
+}
+
 int main(int argc, char **argv)
 {
   #define X(x) nob_go_define(#x, x);
@@ -411,6 +426,8 @@ int main(int argc, char **argv)
 
   const int is_build = (strcmp("build", argv[1]) == 0);
   const int is_run   = (strcmp("run",   argv[1]) == 0);
+
+  const char* gen_includes_c = "gen_includes.c";
 
   if (is_build || is_run) {
     if (argc < 3) usage("missing target");
@@ -458,6 +475,51 @@ int main(int argc, char **argv)
     #undef X
     "\n"
     );
+    exit(EXIT_SUCCESS);
+  } else if (strcmp(gen_includes_c, argv[1]) == 0) {
+    static const char* includes[] = {
+      "float.h",
+      "stdalign.h",
+      "stdarg.h",
+      "stdatomic.h",
+      "stdbool.h",
+      "stddef.h",
+      "stdnoreturn.h",
+    };
+    const size_t n = NOB_ARRAY_LEN(includes);
+    Nob_String_Builder src = {0};
+    sb_printf(&src, "// THIS FILE WAS AUTO-GENEREATED; DO NOT EDIT\n");
+    sb_printf(&src, "// instead: edit include/*, then run ./nob %s\n", gen_includes_c);
+    sb_printf(&src, "const int num_gen_includes = %d;\n", n);
+    sb_printf(&src, "const char* gen_includes[][2] = {\n");
+    for (size_t i=0; i<n; ++i) {
+      Nob_String_Builder tmp = {0};
+      const char* inc = includes[i];
+      assert(nob_read_entire_file(nob_temp_sprintf("include/%s", inc), &tmp));
+      char* ns = normalize_source_string(tmp.items, tmp.count);
+
+      sb_printf(&src, "{\n");
+      sb_printf(&src, "\"%s\",\n", inc);
+      char* p = ns;
+      char* p_end = p + strlen(p);
+      while (p < p_end) {
+        char* pp;
+        for (pp=p; *pp && *pp != '\n'; ++pp) {}
+        if (pp>p) {
+          sb_printf(&src, "\"");
+          for (char* q=p; q<pp; ++q) {
+            if (*q=='"' || *q=='\\') sb_printf(&src, "\\");
+            sb_printf(&src, "%c", *q);
+          }
+          sb_printf(&src, "\\n\"\n");
+        }
+        p=pp+1;
+      }
+      sb_printf(&src, "},\n");
+    }
+    sb_printf(&src, "};\n");
+    assert(nob_write_entire_file(gen_includes_c, src.items, src.count));
+    printf("wrote %s (%zd bytes)\n", gen_includes_c, src.count);
     exit(EXIT_SUCCESS);
   } else {
     usage("invalid command");

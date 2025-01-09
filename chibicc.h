@@ -28,11 +28,12 @@
 
 // common interface between wasm library and native cli builds
 int verrorf(const char* fmt, va_list ap);
-int errorf(const char* fmt, ...);
 void* scratch_calloc(size_t number, size_t size);
 void* scratch_realloc(void* ptr, size_t size);
-char* get_source_file(char* filename);
+const char *read_source_file(const char *path);
 
+extern const char* gen_includes[][2];
+extern const int num_gen_includes;
 
 #define MAX(x, y) ((x) < (y) ? (y) : (x))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -78,7 +79,7 @@ typedef enum {
 typedef struct {
   char *name;
   int file_no;
-  char *contents;
+  const char *contents;
 
   // For #line directive
   char *display_name;
@@ -92,7 +93,7 @@ struct Token {
   Token *next;      // Next token
   int64_t val;      // If kind is TK_NUM, its value
   double fval;      // If kind is TK_NUM, its value
-  char *loc;        // Token location
+  const char *loc;  // Token location
   int len;          // Token length
   Type *ty;         // Used if TK_NUM or TK_STR
   char *str;        // String literal contents including terminating '\0'
@@ -108,7 +109,7 @@ struct Token {
 };
 
 noreturn void error(char *fmt, ...) __attribute__((format(printf, 1, 2)));
-noreturn void error_at(char *loc, char *fmt, ...) __attribute__((format(printf, 2, 3)));
+noreturn void error_at(const char *loc, char *fmt, ...) __attribute__((format(printf, 2, 3)));
 noreturn void error_tok(Token *tok, char *fmt, ...) __attribute__((format(printf, 2, 3)));
 void warn_tok(Token *tok, char *fmt, ...) __attribute__((format(printf, 2, 3)));
 bool equal(Token *tok, char *op);
@@ -116,7 +117,7 @@ Token *skip(Token *tok, char *op);
 bool consume(Token **rest, Token *tok, char *str);
 void convert_pp_tokens(Token *tok);
 File **get_input_files(void);
-File *new_file(char *name, int file_no, char *contents);
+File *new_file(char *name, int file_no, const char *contents);
 Token *tokenize_string_literal(Token *tok, Type *basety);
 Token *tokenize(File *file);
 char* normalize_source_string(char* p, size_t cap);
@@ -431,21 +432,11 @@ int codegen(Obj *prog, void* out_buffer, size_t out_cap);
 int align_to(int n, int align);
 
 //
-// unicode.c
-//
-
-int encode_utf8(char *buf, uint32_t c);
-uint32_t decode_utf8(char **new_pos, char *p);
-bool is_ident1(uint32_t c);
-bool is_ident2(uint32_t c);
-int display_width(char *p, int len);
-
-//
 // hashmap.c
 //
 
 typedef struct {
-  char *key;
+  const char *key;
   int keylen;
   void *val;
 } HashEntry;
@@ -456,12 +447,12 @@ typedef struct {
   int used;
 } HashMap;
 
-void *hashmap_get(HashMap *map, char *key);
-void *hashmap_get2(HashMap *map, char *key, int keylen);
-void hashmap_put(HashMap *map, char *key, void *val);
-void hashmap_put2(HashMap *map, char *key, int keylen, void *val);
-void hashmap_delete(HashMap *map, char *key);
-void hashmap_delete2(HashMap *map, char *key, int keylen);
+void *hashmap_get(HashMap *map, const char *key);
+void *hashmap_get2(HashMap *map, const char *key, int keylen);
+void hashmap_put(HashMap *map, const char *key, void *val);
+void hashmap_put2(HashMap *map, const char *key, int keylen, void *val);
+void hashmap_delete(HashMap *map, const char *key);
+void hashmap_delete2(HashMap *map, const char *key, int keylen);
 
 //
 // main.c

@@ -120,7 +120,7 @@ static Hideset *hideset_union(Hideset *hs1, Hideset *hs2) {
   return head.next;
 }
 
-static bool hideset_contains(Hideset *hs, char *s, int len) {
+static bool hideset_contains(Hideset *hs, const char *s, int len) {
   for (; hs; hs = hs->next)
     if (strlen(hs->name) == len && !strncmp(hs->name, s, len))
       return true;

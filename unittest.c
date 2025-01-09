@@ -7,6 +7,11 @@ int verrorf(const char* fmt, va_list ap)
   assert(!"TODO");
 }
 
+const char *read_source_file(const char *path)
+{
+  assert(!"TODO");
+}
+
 void* scratch_calloc(size_t number, size_t size)
 {
   return calloc(number, size);
@@ -116,7 +121,7 @@ int main(int argc, char** argv)
 __attribute__((visibility("default")))
 void run_tests(void)
 {
-	test_all();
+  test_all();
 }
 
 #else
