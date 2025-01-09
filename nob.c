@@ -382,6 +382,21 @@ static int handle_unittest_target(char* t, size_t tn)
   assert(!"unreachable");
 }
 
+static void run_artifact(char* artifact, int argc, char** argv)
+{
+  const size_t artifactn = strlen(artifact);
+  const char* dotwasm = ".wasm";
+  const size_t dotwasmn = strlen(dotwasm);
+  const int is_wasm = artifactn > dotwasmn && strcmp(artifact + (artifactn-dotwasmn), dotwasm) == 0;
+  if (is_wasm) {
+    assert(!"TODO run wasm");
+  } else {
+    Nob_Cmd cmd = {0};
+    nob_cmd_append(&cmd, nob_temp_sprintf("./%s", artifact));
+    for (int i=0; i < argc; i++) nob_cmd_append(&cmd, argv[i]);
+    if (!nob_cmd_run_sync(cmd)) exit(EXIT_FAILURE);
+  }
+}
 
 int main(int argc, char **argv)
 {
@@ -405,7 +420,6 @@ int main(int argc, char **argv)
     char* artifact = NULL;
     if (read_webcc_target(t, tn)) {
       artifact = build_webcc(webcc_target_type, webcc_target_x);
-      exit(EXIT_SUCCESS);
     } else if (handle_unittest_target(t,tn)) {
       artifact = t;
     } else {
@@ -413,21 +427,7 @@ int main(int argc, char **argv)
       exit(EXIT_FAILURE);
     }
 
-    if (is_run) {
-      switch (webcc_target_type) {
-      case WEBCC_NATIVE: {
-        Nob_Cmd cmd = {0};
-        nob_cmd_append(&cmd, nob_temp_sprintf("./%s", artifact));
-        for (int i=3; i < argc; i++) nob_cmd_append(&cmd, argv[i]);
-        if (!nob_cmd_run_sync(cmd)) exit(EXIT_FAILURE);
-      } break;
-      case WEBCC_Xw:
-      case WEBCC_Xn:
-        assert(!"TODO");
-        break;
-      default: assert(!"unreachable");
-      }
-    }
+    if (is_run) run_artifact(artifact, argc-3, argv+3);
 
     exit(EXIT_SUCCESS);
   } else if (strcmp("set", argv[1]) == 0) {
